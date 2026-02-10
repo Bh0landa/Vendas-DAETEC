@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-DB_FILE = Path(__file__).parent.parent.parent / "data" / "vendas.db"
+DB_FILE = Path(__file__).parent.parent.parent / "data" / "vendedores.db"
 
 def initialize_database():
     """

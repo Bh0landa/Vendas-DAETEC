@@ -85,40 +85,40 @@ class AppWindow(tk.Tk):
         Abre uma nova janela para mostrar a lista de vendedores.
         """
 
+        # Janela para exibir os vendedores
         sellers_win = tk.Toplevel(self)
         sellers_win.title("Lista de Vendedores")
         sellers_win.geometry("400x300")
 
+        # Deixa a janela modal
         sellers_win.transient(self)
         sellers_win.grab_set()
 
-        # --- Frame para a Tabela ---
+        # Frame para a tabela de vendedores
         table_frame = tk.Frame(sellers_win)
         table_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # --- Tabela de Vendedores (dentro do frame da tabela) ---
+        # Configuração da tabela de vendedores
         columns = ("id", "nome")
         tree = ttk.Treeview(table_frame, columns=columns, show="headings")
-
         tree.heading("id", text="ID")
         tree.heading("nome", text="Nome do Vendedor")
         tree.column("id", width=80, anchor=tk.CENTER)
-        tree.column("nome", width=280) # Ajustado um pouco a largura
+        tree.column("nome", width=280)
 
-        # Adiciona a scrollbar à tabela
+        # Scrollbar
         scrollbar = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=tree.yview)
         tree.configure(yscroll=scrollbar.set)
         scrollbar.pack(side="right", fill="y")
         tree.pack(side="left", fill="both", expand=True)
 
-        # --- Frame para o Botão ---
+        # Frame para o botão
         button_frame = tk.Frame(sellers_win)
         button_frame.pack(fill="x", padx=10, pady=(0, 10))
-
         back_button = tk.Button(button_frame, text="Voltar", command=sellers_win.destroy)
         back_button.pack()
-
         sellers_list = sales_logic.get_all_sellers()
+        
         for seller in sellers_list:
             tree.insert("", tk.END, values=seller)
 
