@@ -69,7 +69,7 @@ class AppWindow(tk.Tk):
         add_seller_button.pack(side="left", padx=0, pady=5)
 
         # Botão de descadastrar vendedor
-        delete_seller_button = tk.Button(self.menu_frame, text="Descadastrar Vendedor")
+        delete_seller_button = tk.Button(self.menu_frame, text="Descadastrar Vendedor", command=self.delete_seller_dialog)
         delete_seller_button.pack(side="left", padx=0, pady=5)
 
         # Botão mostrar vendedores
@@ -132,3 +132,14 @@ class AppWindow(tk.Tk):
                 messagebox.showinfo("Sucesso", f"Vendedor '{name}' cadastrado com sucesso!")
             else:
                 messagebox.showerror("Erro", f"Não foi possível cadastrar o vendedor '{name}'.\nVerifique se ele já não está na lista.")
+    
+    def delete_seller_dialog(self):
+        """
+        Abre um diálogo para deletar um vendedor existente.
+        """
+        seller_id = simpledialog.askinteger("Descadastrar Vendedor", "Digite o ID do vendedor a ser removido:", parent=self)
+        if seller_id:
+            if sales_logic.delete_seller(seller_id):
+                messagebox.showinfo("Sucesso", f"Vendedor com ID {seller_id} deletado com sucesso!")
+            else:
+                messagebox.showerror("Erro", f"Não foi possível deletar o vendedor com ID {seller_id}.\nVerifique se o ID está correto.")

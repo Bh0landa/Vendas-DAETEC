@@ -44,7 +44,6 @@ def initialize_database():
 def add_seller(name):
     """
     Adiciona um novo vendedor ao banco de dados.
-    Retorna True se for bem-sucedido, False em caso de erro.
     """
     conn = None
     try:
@@ -64,6 +63,29 @@ def add_seller(name):
         if conn:
             conn.close()
 
+def delete_seller(seller_id):
+    """
+    Remove um vendedor do banco de dados pelo ID.
+    """
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM vendedores WHERE id = ?", (seller_id,))
+        conn.commit()
+        if cursor.rowcount > 0:
+            print(f"Vendedor com ID {seller_id} deletado com sucesso.")
+            return True
+        else:
+            print(f"Nenhum vendedor encontrado com ID {seller_id}.")
+            return False
+    except sqlite3.Error as e:
+        print(f"Erro ao deletar vendedor: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 def get_all_sellers():
     """
     Busca todos os vendedores cadastrados no banco de dados.
@@ -73,7 +95,7 @@ def get_all_sellers():
     try:
         conn = sqlite3.connect(DB_FILE)
         cursor = conn.cursor()
-        cursor.execute("SELECT id, nome FROM vendedores ORDER BY nome")
+        cursor.execute("SELECT id, nome FROM vendedores ORDER BY id")
         sellers = cursor.fetchall()
         return sellers
     except sqlite3.Error as e:
