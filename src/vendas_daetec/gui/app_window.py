@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
-from .views import ProductsView
+from .views import ProductsView, AddProductDialog
 from ..core import sales_logic
 
 class AppWindow(tk.Tk):
@@ -57,7 +57,7 @@ class AppWindow(tk.Tk):
         """
         
         # Botão de cadastrar produto
-        add_product_button = tk.Button(self.menu_frame, text="Cadastrar Produto")
+        add_product_button = tk.Button(self.menu_frame, text="Cadastrar Produto", command=self._add_product_dialog)
         add_product_button.pack(side="left", padx=(10, 0), pady=5)
 
         # Botão de descadastrar produto
@@ -126,6 +126,7 @@ class AppWindow(tk.Tk):
         """
         Abre um diálogo para adicionar um novo vendedor.
         """
+
         name = simpledialog.askstring("Cadastrar Vendedor", "Digite o nome do vendedor:", parent=self)
         if name:
             if sales_logic.add_seller(name):
@@ -137,9 +138,30 @@ class AppWindow(tk.Tk):
         """
         Abre um diálogo para deletar um vendedor existente.
         """
+
         seller_id = simpledialog.askinteger("Descadastrar Vendedor", "Digite o ID do vendedor a ser removido:", parent=self)
         if seller_id:
             if sales_logic.delete_seller(seller_id):
                 messagebox.showinfo("Sucesso", f"Vendedor com ID {seller_id} deletado com sucesso!")
             else:
                 messagebox.showerror("Erro", f"Não foi possível deletar o vendedor com ID {seller_id}.\nVerifique se o ID está correto.")
+
+    def _add_product_dialog(self):
+        """
+        Abre o diálogo para adicionar um novo produto.
+        """
+
+        dialog = AddProductDialog(self)
+        self.wait_window(dialog)
+
+        if dialog.result:
+            name, price, seller_id = dialog.result
+            
+            if sales_logic.add_product(name, price, seller_id):
+                messagebox.showinfo("Sucesso", f"Produto '{name}' cadastrado com sucesso!")
+                self.products_view_frame.load_products()
+                
+            else:
+                messagebox.showerror("Erro de Banco de Dados", "Não foi possível cadastrar o produto.\nVerifique se o ID do vendedor é válido.")
+        else:
+            print("Cadastro de produto cancelado.")

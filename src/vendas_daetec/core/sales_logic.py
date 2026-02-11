@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-DB_FILE = Path(__file__).parent.parent.parent / "data" / "vendedores.db"
+DB_FILE = Path(__file__).parent.parent.parent / "data" / "planilhas.db"
 
 def initialize_database():
     """
@@ -24,11 +24,10 @@ def initialize_database():
         # Tabela 2: Produtos
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS produtos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER,          -- ID do Vendedor (Chave Estrangeira)
             nome TEXT NOT NULL,
             preco REAL NOT NULL,
-            vendedor_id INTEGER,
-            FOREIGN KEY (vendedor_id) REFERENCES vendedores (id)
+            FOREIGN KEY (id) REFERENCES vendedores (id)
         )
         """)
 
@@ -100,6 +99,43 @@ def get_all_sellers():
         return sellers
     except sqlite3.Error as e:
         print(f"Erro ao buscar vendedores: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+def add_product(name, price, seller_id):
+    """
+    Adiciona um novo produto ao banco de dados.
+    """
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO produtos (id, nome, preco) VALUES (?, ?, ?)", (seller_id, name, price))
+        conn.commit()
+        print(f"Produto '{name}' adicionado com sucesso.")
+        return True
+    except sqlite3.Error as e:
+        print(f"Erro ao adicionar produto: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+def get_all_products():
+    """
+    Busca todos os produtos cadastrados, ordenados por ID e nome do produto.
+    """
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nome, preco FROM produtos ORDER BY id, nome")
+        products = cursor.fetchall()
+        return products
+    except sqlite3.Error as e:
+        print(f"Erro ao buscar produtos: {e}")
         return []
     finally:
         if conn:
