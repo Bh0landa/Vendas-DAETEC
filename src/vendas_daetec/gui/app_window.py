@@ -1,6 +1,6 @@
 import tkinter as tk
-from tkinter import ttk, simpledialog, messagebox
-from .views import ProductsView, AddProductDialog
+from tkinter import ttk, simpledialog, messagebox, filedialog
+from .views import ProductsView, AddProductDialog, SaleDialog
 from ..core import sales_logic
 
 class AppWindow(tk.Tk):
@@ -61,15 +61,15 @@ class AppWindow(tk.Tk):
         add_product_button.pack(side="left", padx=(10, 0), pady=5)
 
         # Botão de descadastrar produto
-        delete_product_button = tk.Button(self.menu_frame, text="Descadastrar Produto")
+        delete_product_button = tk.Button(self.menu_frame, text="Descadastrar Produto", command=self._delete_product_dialog)
         delete_product_button.pack(side="left", padx=0, pady=5)
 
         # Botão de Cadastrar vendedor
-        add_seller_button = tk.Button(self.menu_frame, text="Cadastrar Vendedor", command=self.add_seller_dialog)
+        add_seller_button = tk.Button(self.menu_frame, text="Cadastrar Vendedor", command=self._open_add_seller_dialog)
         add_seller_button.pack(side="left", padx=0, pady=5)
 
         # Botão de descadastrar vendedor
-        delete_seller_button = tk.Button(self.menu_frame, text="Descadastrar Vendedor", command=self.delete_seller_dialog)
+        delete_seller_button = tk.Button(self.menu_frame, text="Descadastrar Vendedor", command=self._open_delete_seller_dialog)
         delete_seller_button.pack(side="left", padx=0, pady=5)
 
         # Botão mostrar vendedores
@@ -77,8 +77,12 @@ class AppWindow(tk.Tk):
         show_sellers_button.pack(side="left", padx=0, pady=5)
 
         # Botão de relatório
-        report_button = tk.Button(self.menu_frame, text="Gerar Relatório")
+        report_button = tk.Button(self.menu_frame, text="Gerar Relatório", command=self._generate_report)
         report_button.pack(side="left", padx=0, pady=5)
+
+        # Botão de Vender
+        sell_button = tk.Button(self.menu_frame, text="Vender", command=self._open_sale_dialog)
+        sell_button.pack(side="right", padx=(0, 10), pady=5)
 
     def _show_sellers_window(self):
         """
@@ -122,7 +126,7 @@ class AppWindow(tk.Tk):
         for seller in sellers_list:
             tree.insert("", tk.END, values=seller)
 
-    def add_seller_dialog(self):
+    def _open_add_seller_dialog(self):
         """
         Abre um diálogo para adicionar um novo vendedor.
         """
@@ -134,17 +138,24 @@ class AppWindow(tk.Tk):
             else:
                 messagebox.showerror("Erro", f"Não foi possível cadastrar o vendedor '{name}'.\nVerifique se ele já não está na lista.")
     
-    def delete_seller_dialog(self):
+    def _open_delete_seller_dialog(self):
         """
         Abre um diálogo para deletar um vendedor existente.
         """
-
         seller_id = simpledialog.askinteger("Descadastrar Vendedor", "Digite o ID do vendedor a ser removido:", parent=self)
         if seller_id:
-            if sales_logic.delete_seller(seller_id):
+            result = sales_logic.delete_seller(seller_id)
+            
+            if result is True:
                 messagebox.showinfo("Sucesso", f"Vendedor com ID {seller_id} deletado com sucesso!")
+                # Opcional: Se a janela de vendedores estiver aberta, atualizá-la.
+            elif result == "constraint_failed":
+                messagebox.showerror("Operação Bloqueada", 
+                                     f"Não é possível remover o vendedor com ID {seller_id} porque ele possui produtos ou vendas associadas a ele.")
+            elif result == "not_found":
+                messagebox.showwarning("Aviso", f"Nenhum vendedor encontrado com o ID {seller_id}.")
             else:
-                messagebox.showerror("Erro", f"Não foi possível deletar o vendedor com ID {seller_id}.\nVerifique se o ID está correto.")
+                messagebox.showerror("Erro", f"Ocorreu um erro desconhecido ao tentar deletar o vendedor com ID {seller_id}.")
 
     def _add_product_dialog(self):
         """
@@ -152,16 +163,93 @@ class AppWindow(tk.Tk):
         """
 
         dialog = AddProductDialog(self)
-        self.wait_window(dialog)
 
         if dialog.result:
             name, price, seller_id = dialog.result
             
             if sales_logic.add_product(name, price, seller_id):
-                messagebox.showinfo("Sucesso", f"Produto '{name}' cadastrado com sucesso!")
+                messagebox.showinfo("Sucesso", "Produto adicionado com sucesso!")
+
+                # Atualiza a visualização da tabela de produtos
                 self.products_view_frame.load_products()
-                
             else:
-                messagebox.showerror("Erro de Banco de Dados", "Não foi possível cadastrar o produto.\nVerifique se o ID do vendedor é válido.")
+                # mas uma mensagem para o usuário também seria útil.
+                messagebox.showerror("Erro", "Ocorreu um erro ao adicionar o produto.")
         else:
             print("Cadastro de produto cancelado.")
+    
+    def _delete_product_dialog(self):
+        """
+        Abre um diálogo para deletar um produto existente.
+        """
+        product_id = simpledialog.askstring("Descadastrar Produto", 
+                                            "Digite o ID do produto a ser removido (ex: PROD-0001):", 
+                                            parent=self)
+        
+        if product_id:
+
+            product_id = product_id.strip().upper()
+            
+            if sales_logic.delete_product(product_id):
+                messagebox.showinfo("Sucesso", f"Produto com ID {product_id} deletado com sucesso!")
+                
+                # Atualiza a visualização da tabela de produtos
+                self.products_view_frame.load_products()
+            else:
+                messagebox.showerror("Erro", f"Não foi possível deletar o produto com ID {product_id}.\nVerifique se o ID está correto.")
+
+    def _open_sale_dialog(self):
+        """
+        Abre o diálogo para registrar uma nova venda.
+        """
+        SaleDialog(self)
+
+    def _generate_report(self):
+        """
+        Gera o relatório de vendas e pede ao usuário para salvar em um arquivo.
+        """
+        report_content = sales_logic.generate_sales_report()
+
+        # Pede ao usuário para escolher onde salvar o arquivo
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+            title="Salvar Relatório de Vendas"
+        )
+
+        if not file_path:
+            # Usuário cancelou a caixa de diálogo
+            return
+
+        try:
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(report_content)
+            messagebox.showinfo("Sucesso", f"Relatório salvo com sucesso em:\n{file_path}")
+        except Exception as e:
+            messagebox.showerror("Erro ao Salvar", f"Não foi possível salvar o arquivo.\nErro: {e}")
+
+    def _load_initial_taxes(self):
+    
+        """
+        Carrega as taxas do DB e as coloca nas variáveis da interface.
+        """
+        
+        self.taxa_debito_var.set(sales_logic.get_config('taxa_debito'))
+        self.taxa_credito_var.set(sales_logic.get_config('taxa_credito'))
+
+    def _save_tax_rate(self, chave, valor):
+        """
+        Valida e salva uma taxa no banco de dados.
+        """
+
+        try:
+            # Tenta converter para float para garantir que é um número válido
+            float(valor.replace(',', '.'))
+            sales_logic.set_config(chave, valor)
+            print(f"Configuração '{chave}' salva com o valor: {valor}")
+        except ValueError:
+            print(f"Erro: Valor '{valor}' não é um número válido para a taxa.")
+            # Opcional: mostrar um messagebox de erro para o usuário
+            messagebox.showerror("Erro de Formato", f"O valor '{valor}' não é um número válido para a taxa.")
+            # Recarrega o valor antigo para não deixar o valor inválido na tela
+            self._load_initial_taxes()
