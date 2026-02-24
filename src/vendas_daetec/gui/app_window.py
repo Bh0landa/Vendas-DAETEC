@@ -80,6 +80,10 @@ class AppWindow(tk.Tk):
         report_button = tk.Button(self.menu_frame, text="Gerar Relatório", command=self._generate_report)
         report_button.pack(side="left", padx=0, pady=5)
 
+        # Botão de limpar histórico
+        clear_history_button = tk.Button(self.menu_frame, text="Limpar Histórico", command=self._clear_history)
+        clear_history_button.pack(side="left", padx=0, pady=5)
+
         # Botão de Vender
         sell_button = tk.Button(self.menu_frame, text="Vender", command=self._open_sale_dialog)
         sell_button.pack(side="right", padx=(0, 10), pady=5)
@@ -253,3 +257,25 @@ class AppWindow(tk.Tk):
             messagebox.showerror("Erro de Formato", f"O valor '{valor}' não é um número válido para a taxa.")
             # Recarrega o valor antigo para não deixar o valor inválido na tela
             self._load_initial_taxes()
+    
+    def _clear_history(self):
+        """
+        Limpa o histórico de vendas após confirmação.
+        """
+
+        confirm = messagebox.askyesno(
+            "Confirmar Limpeza",
+            "Tem certeza que deseja apagar TODO o histórico de vendas?\n\n"
+            "Isso removerá irreversivelmente todas as vendas registradas,\n"
+            "mas manterá os cadastros de Vendedores e Produtos.\n\n"
+            "Recomendamos que gere um relatório antes de prosseguir.",
+            parent=self,
+            icon='warning'
+        )
+
+        if confirm:
+            success = sales_logic.clear_sales_data()
+            if success:
+                messagebox.showinfo("Sucesso", "Histórico de vendas apagado com sucesso!", parent=self)
+            else:
+                messagebox.showerror("Erro", "Ocorreu um erro ao tentar limpar o histórico.", parent=self)

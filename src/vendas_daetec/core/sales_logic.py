@@ -1,18 +1,9 @@
 import sqlite3
 import datetime
 from pathlib import Path
-import sys
 
-# --- Configuração do Caminho do Banco de Dados ---
-if getattr(sys, 'frozen', False):
-    # Se estiver rodando como um executável (criado pelo PyInstaller)
-    # O banco de dados ficará em uma pasta 'data' ao lado do .exe
-    BASE_DIR = Path(sys.executable).parent
-    DB_PATH = BASE_DIR / "data" / "planilhas.db"
-else:
-    # Se estiver rodando como um script normal do Python
-    # O banco de dados ficará na pasta 'data' na raiz do projeto
-    DB_PATH = Path(__file__).parent.parent.parent / "data" / "planilhas.db"
+# Configuração do Caminho do Banco de Dados
+DB_PATH = Path(__file__).parent.parent.parent / "data" / "planilhas.db"
 
 def initialize_database():
     """
@@ -475,6 +466,35 @@ def generate_sales_report():
     except sqlite3.Error as e:
         print(f"Erro ao gerar relatório: {e}")
         return f"Erro ao gerar relatório: {e}"
+    finally:
+        if conn:
+            conn.close()
+
+def clear_sales_data():
+    """
+    Remove todos os registros das tabelas relacionadas a vendas.
+    Mantém vendedores e produtos intactos.
+    """
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Habilita foreign keys para garantir integridade (embora vamos apagar na ordem certa)
+        cursor.execute("PRAGMA foreign_keys = ON")
+
+        # Apaga os dados das tabelas de vendas e suas dependências
+        # A ordem é importante para não dar erro de chave estrangeira
+        cursor.execute("DELETE FROM venda_pagamentos")
+        cursor.execute("DELETE FROM venda_itens")
+        cursor.execute("DELETE FROM vendas")
+        
+        conn.commit()
+        return True
+    
+    except sqlite3.Error as e:
+        print(f"Erro ao limpar dados de vendas: {e}")
+        return False
     finally:
         if conn:
             conn.close()
