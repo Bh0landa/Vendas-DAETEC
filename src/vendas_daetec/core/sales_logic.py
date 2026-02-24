@@ -9,8 +9,12 @@ def initialize_database():
     """
     Cria/verifica o banco de dados e as tabelas 'vendedores' e 'produtos'.
     """
+    
+    # Garante que o diretório para o banco de dados exista
     DB_PATH.parent.mkdir(exist_ok=True)
     conn = None
+    
+    # Criação das tabelas necessárias para a aplicação
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -77,11 +81,15 @@ def initialize_database():
         )
         """)
 
+        # Confirma as alterações no banco de dados
         conn.commit()
         print(f"Banco de dados verificado/inicializado com sucesso em: {DB_PATH}")
 
+    # Tratamento de erros específicos do SQLite
     except sqlite3.Error as e:
         print(f"Erro ao inicializar o banco de dados: {e}")
+    
+    # Fechamento da conexão com o banco de dados
     finally:
         if conn:
             conn.close()
@@ -90,7 +98,10 @@ def add_seller(name):
     """
     Adiciona um novo vendedor ao banco de dados.
     """
+    
+    # Tenta inserir um novo vendedor
     conn = None
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -102,12 +113,15 @@ def add_seller(name):
         conn.commit()
         print(f"Vendedor '{name}' adicionado com sucesso.")
         return True
+    
     except sqlite3.IntegrityError:
         print(f"Erro: O vendedor '{name}' já existe.")
         return False
+    
     except sqlite3.Error as e:
         print(f"Erro ao adicionar vendedor: {e}")
         return False
+    
     finally:
         if conn:
             conn.close()
@@ -117,23 +131,30 @@ def delete_seller(seller_id):
     Remove um vendedor do banco de dados pelo ID.
     Retorna True em caso de sucesso, uma mensagem de erro específica em caso de falha.
     """
+    
+    # Tenta deletar um vendedor
     conn = None
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON")
         cursor.execute("DELETE FROM vendedores WHERE id = ?", (seller_id,))
         conn.commit()
+        
         if cursor.rowcount > 0:
             return True
+        
         else:
-            return "not_found" # Retorna um código para "não encontrado"
+            return "not_found"
+    
     except sqlite3.IntegrityError:
-        # Este erro acontece especificamente quando a chave estrangeira falha
         return "constraint_failed"
+    
     except sqlite3.Error as e:
         print(f"Erro ao deletar vendedor: {e}")
         return False
+    
     finally:
         if conn:
             conn.close()
@@ -143,16 +164,21 @@ def get_all_sellers():
     Busca todos os vendedores cadastrados no banco de dados.
     Retorna uma lista de tuplas (id, nome).
     """
+    
+    # Busca todos os vendedores
     conn = None
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT id, nome FROM vendedores ORDER BY id")
         sellers = cursor.fetchall()
         return sellers
+    
     except sqlite3.Error as e:
         print(f"Erro ao buscar vendedores: {e}")
         return []
+    
     finally:
         if conn:
             conn.close()
@@ -161,17 +187,19 @@ def add_product(name, price, seller_id):
     """
     Adiciona um novo produto ao banco de dados.
     """
+    
+    # Gera um ID único para o produto
     conn = None
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        
         cursor.execute("SELECT id FROM produtos WHERE id LIKE 'PROD-%' ORDER BY id DESC LIMIT 1")
         last_id = cursor.fetchone()
 
         if last_id:
             last_number = int(last_id[0].split('-')[1])
             new_product_id = f"PROD-{last_number + 1:04d}"
+        
         else:
             new_product_id = "PROD-0001"
 
@@ -179,9 +207,11 @@ def add_product(name, price, seller_id):
         conn.commit()
         print(f"Produto '{name}' adicionado com sucesso com o ID {new_product_id}.")
         return True
+    
     except sqlite3.Error as e:
         print(f"Erro ao adicionar produto: {e}")
         return False
+    
     finally:
         if conn:
             conn.close()
@@ -190,7 +220,10 @@ def delete_product(product_id):
     """
     Remove um produto do banco de dados pelo seu ID.
     """
+    
+    # Tenta deletar um produto
     conn = None
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -207,6 +240,7 @@ def delete_product(product_id):
     except sqlite3.Error as e:
         print(f"Erro ao deletar produto: {e}")
         return False
+    
     finally:
         if conn:
             conn.close()
@@ -216,11 +250,15 @@ def get_all_products():
     Busca todos os produtos com os nomes dos vendedores correspondentes.
     Retorna uma lista de tuplas (nome_vendedor, id_produto, nome_produto, preco).
     """
+    
+    # Busca todos os produtos junto com o nome do vendedor
     conn = None
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
+        # Consulta SQL para buscar os produtos junto com o nome do vendedor
         sql_query = """
         SELECT
             v.nome,
@@ -235,9 +273,11 @@ def get_all_products():
         cursor.execute(sql_query)
         products = cursor.fetchall()
         return products
+    
     except sqlite3.Error as e:
         print(f"Erro ao buscar produtos: {e}")
         return []
+    
     finally:
         if conn:
             conn.close()
@@ -247,16 +287,21 @@ def get_products_by_seller(seller_id):
     Busca todos os produtos de um vendedor específico.
     Retorna uma lista de tuplas (id_produto, nome_produto, preco).
     """
+    
+    # Busca os produtos de um vendedor específico
     conn = None
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT id, nome, preco FROM produtos WHERE vendedor_id = ? ORDER BY nome", (seller_id,))
         products = cursor.fetchall()
         return products
+    
     except sqlite3.Error as e:
         print(f"Erro ao buscar produtos por vendedor: {e}")
         return []
+    
     finally:
         if conn:
             conn.close()
@@ -266,16 +311,21 @@ def get_product_details(product_id):
     Busca os detalhes de um único produto pelo seu ID.
     Retorna uma tupla (id, nome, preco) ou None se não for encontrado.
     """
+    
+    # Busca os detalhes de um produto específico
     conn = None
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT id, nome, preco FROM produtos WHERE id = ?", (product_id,))
         product = cursor.fetchone()
         return product
+    
     except sqlite3.Error as e:
         print(f"Erro ao buscar detalhes do produto: {e}")
         return None
+    
     finally:
         if conn:
             conn.close()
@@ -285,33 +335,44 @@ def get_config(chave):
     Busca o valor de uma configuração específica.
     Retorna '0.0' se a chave não for encontrada.
     """
+    
+    # Busca o valor de uma configuração específica
     conn = None
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT valor FROM configuracoes WHERE chave = ?", (chave,))
         resultado = cursor.fetchone()
-        # Se encontrou um resultado, retorna ele. Senão, retorna '0.0'.
         return resultado[0] if resultado else '0.0'
+    
     except sqlite3.Error as e:
         print(f"Erro ao buscar configuração '{chave}': {e}")
-        return '0.0' # Retorna '0.0' em caso de erro também.
+        return '0.0'
+    
     finally:
         if conn:
             conn.close()
 
 def set_config(chave, valor):
-    """Salva ou atualiza o valor de uma configuração."""
+    """
+    Salva ou atualiza o valor de uma configuração.
+    """
+    
+    # Tenta salvar ou atualizar o valor de uma configuração
     conn = None
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("REPLACE INTO configuracoes (chave, valor) VALUES (?, ?)", (chave, valor))
         conn.commit()
         return True
+    
     except sqlite3.Error as e:
         print(f"Erro ao salvar configuração '{chave}': {e}")
         return False
+    
     finally:
         if conn:
             conn.close()
@@ -327,13 +388,14 @@ def register_sale(vendedor_id, valor_total, cart_items, payments):
     :param payments: Lista de dicionários, cada um representando um pagamento.
                      Ex: [{'metodo': 'Pix', 'valor': 20.0}, ...]
     """
+    
+    # Registra uma venda completa usando uma transação para garantir integridade dos dados
     conn = None
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("PRAGMA foreign_keys = ON")
-
-        # --- Início da Transação ---
 
         # 1. Inserir na tabela 'vendas' (o recibo geral)
         data_atual = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -341,10 +403,13 @@ def register_sale(vendedor_id, valor_total, cart_items, payments):
             "INSERT INTO vendas (vendedor_id, valor_total, data_venda) VALUES (?, ?, ?)",
             (vendedor_id, valor_total, data_atual)
         )
-        venda_id = cursor.lastrowid # Pega o ID da venda que acabamos de criar
+        
+        # Pega o ID da venda que acabamos de criar
+        venda_id = cursor.lastrowid
 
         # 2. Inserir na tabela 'venda_itens' (os produtos do carrinho)
         itens_para_inserir = []
+        
         for item in cart_items:
             itens_para_inserir.append(
                 (venda_id, item['produto_id'], item['quantidade'], item['preco_unitario'])
@@ -356,6 +421,7 @@ def register_sale(vendedor_id, valor_total, cart_items, payments):
 
         # 3. Inserir na tabela 'venda_pagamentos' (os pagamentos)
         pagamentos_para_inserir = []
+        
         for pagamento in payments:
             pagamentos_para_inserir.append(
                 (venda_id, pagamento['metodo'], pagamento['valor'])
@@ -365,16 +431,18 @@ def register_sale(vendedor_id, valor_total, cart_items, payments):
             pagamentos_para_inserir
         )
 
-        # --- Fim da Transação ---
-        conn.commit() # Confirma todas as operações se tudo deu certo
+        # Confirma todas as operações se tudo deu certo
+        conn.commit()
         print(f"Venda ID {venda_id} registrada com sucesso!")
         return True
 
     except sqlite3.Error as e:
         print(f"Erro ao registrar venda. A transação foi revertida. Erro: {e}")
+        
         if conn:
-            conn.rollback() # Desfaz todas as operações se algo deu errado
+            conn.rollback()
         return False
+    
     finally:
         if conn:
             conn.close()
@@ -383,12 +451,12 @@ def generate_sales_report():
     """
     Busca todos os dados de vendas e gera uma string de relatório formatado.
     """
+    
+    # Gera um relatório geral de vendas
     conn = None
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-
-        # 1. Buscar todos os vendedores que fizeram vendas
         cursor.execute("""
             SELECT DISTINCT v.id, v.nome
             FROM vendedores v
@@ -400,7 +468,6 @@ def generate_sales_report():
         if not vendedores:
             return "Nenhuma venda registrada para gerar relatório."
 
-        # Iniciar a construção do relatório
         report_lines = [
             "=====================================",
             "      RELATÓRIO GERAL DE VENDAS      ",
@@ -428,8 +495,10 @@ def generate_sales_report():
             produtos_vendidos = cursor.fetchall()
 
             report_lines.append("  PRODUTOS VENDIDOS:")
+            
             if not produtos_vendidos:
                 report_lines.append("    - Nenhum produto vendido neste período.")
+            
             else:
                 for prod_id, prod_nome, quantidade in produtos_vendidos:
                     report_lines.append(f"    - [{prod_id}] {prod_nome}: {quantidade} unidade(s)")
@@ -449,8 +518,10 @@ def generate_sales_report():
             
             total_recebido = 0
             report_lines.append("  RESUMO DE PAGAMENTOS:")
+            
             if not pagamentos:
                 report_lines.append("    - Nenhum pagamento registrado.")
+            
             else:
                 for metodo, valor in pagamentos:
                     total_recebido += valor
@@ -466,6 +537,7 @@ def generate_sales_report():
     except sqlite3.Error as e:
         print(f"Erro ao gerar relatório: {e}")
         return f"Erro ao gerar relatório: {e}"
+    
     finally:
         if conn:
             conn.close()
@@ -475,16 +547,14 @@ def clear_sales_data():
     Remove todos os registros das tabelas relacionadas a vendas.
     Mantém vendedores e produtos intactos.
     """
+    
+    # Limpa todos os dados relacionados a vendas, mantendo vendedores e produtos
     conn = None
+    
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        
-        # Habilita foreign keys para garantir integridade (embora vamos apagar na ordem certa)
         cursor.execute("PRAGMA foreign_keys = ON")
-
-        # Apaga os dados das tabelas de vendas e suas dependências
-        # A ordem é importante para não dar erro de chave estrangeira
         cursor.execute("DELETE FROM venda_pagamentos")
         cursor.execute("DELETE FROM venda_itens")
         cursor.execute("DELETE FROM vendas")
@@ -495,6 +565,7 @@ def clear_sales_data():
     except sqlite3.Error as e:
         print(f"Erro ao limpar dados de vendas: {e}")
         return False
+    
     finally:
         if conn:
             conn.close()

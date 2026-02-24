@@ -9,6 +9,11 @@ class AppWindow(tk.Tk):
     """
     
     def __init__(self):
+        """
+        Inicializa a janela principal, configura o layout e os componentes.
+        """
+        
+        # Chama o construtor da classe pai
         super().__init__()
         
         # Janela principal
@@ -48,6 +53,8 @@ class AppWindow(tk.Tk):
         """
         Mostra uma tela especificada e esconde as outras.
         """
+        
+        # Alterna a visibilidade dos frames para mostrar apenas o frame solicitado
         frame = self.frames[frame_class]
         frame.tkraise()
 
@@ -127,6 +134,7 @@ class AppWindow(tk.Tk):
         back_button.pack()
         sellers_list = sales_logic.get_all_sellers()
         
+        # Popula a tabela com os vendedores
         for seller in sellers_list:
             tree.insert("", tk.END, values=seller)
 
@@ -135,10 +143,15 @@ class AppWindow(tk.Tk):
         Abre um diálogo para adicionar um novo vendedor.
         """
 
+        # Solicita o nome do vendedor ao usuário
         name = simpledialog.askstring("Cadastrar Vendedor", "Digite o nome do vendedor:", parent=self)
+        
+        # Verifica se o usuário inseriu um nome
         if name:
+            
             if sales_logic.add_seller(name):
                 messagebox.showinfo("Sucesso", f"Vendedor '{name}' cadastrado com sucesso!")
+            
             else:
                 messagebox.showerror("Erro", f"Não foi possível cadastrar o vendedor '{name}'.\nVerifique se ele já não está na lista.")
     
@@ -146,18 +159,27 @@ class AppWindow(tk.Tk):
         """
         Abre um diálogo para deletar um vendedor existente.
         """
+        
+        # Solicita o ID do vendedor a ser deletado
         seller_id = simpledialog.askinteger("Descadastrar Vendedor", "Digite o ID do vendedor a ser removido:", parent=self)
+        
+        # Verifica se o usuário inseriu um ID
         if seller_id:
             result = sales_logic.delete_seller(seller_id)
             
+            # Exibe uma mensagem com base no resultado da operação
             if result is True:
                 messagebox.showinfo("Sucesso", f"Vendedor com ID {seller_id} deletado com sucesso!")
-                # Opcional: Se a janela de vendedores estiver aberta, atualizá-la.
+            
+            # Se a exclusão falhou devido a restrições de integridade (vendedor associado a produtos ou vendas), informa o usuário
             elif result == "constraint_failed":
-                messagebox.showerror("Operação Bloqueada", 
-                                     f"Não é possível remover o vendedor com ID {seller_id} porque ele possui produtos ou vendas associadas a ele.")
+                messagebox.showerror("Operação Bloqueada", f"Não é possível remover o vendedor com ID {seller_id} porque ele possui produtos ou vendas associadas a ele.")
+            
+            # Se o vendedor não for encontrado, informa o usuário
             elif result == "not_found":
                 messagebox.showwarning("Aviso", f"Nenhum vendedor encontrado com o ID {seller_id}.")
+            
+            # Para qualquer outro resultado inesperado, mostra uma mensagem de erro genérica
             else:
                 messagebox.showerror("Erro", f"Ocorreu um erro desconhecido ao tentar deletar o vendedor com ID {seller_id}.")
 
@@ -166,8 +188,10 @@ class AppWindow(tk.Tk):
         Abre o diálogo para adicionar um novo produto.
         """
 
+        # Janela de cadastro de produto
         dialog = AddProductDialog(self)
 
+        # Verifica se o resultado é válido e tenta adicionar o produto
         if dialog.result:
             name, price, seller_id = dialog.result
             
@@ -176,9 +200,10 @@ class AppWindow(tk.Tk):
 
                 # Atualiza a visualização da tabela de produtos
                 self.products_view_frame.load_products()
+            
             else:
-                # mas uma mensagem para o usuário também seria útil.
                 messagebox.showerror("Erro", "Ocorreu um erro ao adicionar o produto.")
+        
         else:
             print("Cadastro de produto cancelado.")
     
@@ -186,19 +211,22 @@ class AppWindow(tk.Tk):
         """
         Abre um diálogo para deletar um produto existente.
         """
-        product_id = simpledialog.askstring("Descadastrar Produto", 
-                                            "Digite o ID do produto a ser removido (ex: PROD-0001):", 
-                                            parent=self)
         
+        # Solicita o ID do produto a ser deletado
+        product_id = simpledialog.askstring("Descadastrar Produto", "Digite o ID do produto a ser removido (ex: PROD-0001):", parent=self)
+        
+        # Verifica se o usuário inseriu um ID
         if product_id:
 
+            # Normaliza o ID do produto
             product_id = product_id.strip().upper()
             
+            # Tenta deletar o produto usando a lógica de negócios
             if sales_logic.delete_product(product_id):
                 messagebox.showinfo("Sucesso", f"Produto com ID {product_id} deletado com sucesso!")
                 
-                # Atualiza a visualização da tabela de produtos
                 self.products_view_frame.load_products()
+            
             else:
                 messagebox.showerror("Erro", f"Não foi possível deletar o produto com ID {product_id}.\nVerifique se o ID está correto.")
 
@@ -206,63 +234,41 @@ class AppWindow(tk.Tk):
         """
         Abre o diálogo para registrar uma nova venda.
         """
+        
+        # Abre a janela de registro de venda
         SaleDialog(self)
 
     def _generate_report(self):
         """
         Gera o relatório de vendas e pede ao usuário para salvar em um arquivo.
         """
+        
+        # Gera o conteúdo do relatório usando a lógica de negócios
         report_content = sales_logic.generate_sales_report()
 
         # Pede ao usuário para escolher onde salvar o arquivo
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".txt",
-            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-            title="Salvar Relatório de Vendas"
-        )
+        file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt"), ("All files", "*.*")], title="Salvar Relatório de Vendas")
 
+        # Verifica se o usuário selecionou um caminho para salvar o arquivo
         if not file_path:
-            # Usuário cancelou a caixa de diálogo
             return
 
+        # Tenta salvar o relatório no arquivo escolhido
         try:
             with open(file_path, "w", encoding="utf-8") as file:
                 file.write(report_content)
+            
             messagebox.showinfo("Sucesso", f"Relatório salvo com sucesso em:\n{file_path}")
+        
         except Exception as e:
             messagebox.showerror("Erro ao Salvar", f"Não foi possível salvar o arquivo.\nErro: {e}")
-
-    def _load_initial_taxes(self):
-    
-        """
-        Carrega as taxas do DB e as coloca nas variáveis da interface.
-        """
-        
-        self.taxa_debito_var.set(sales_logic.get_config('taxa_debito'))
-        self.taxa_credito_var.set(sales_logic.get_config('taxa_credito'))
-
-    def _save_tax_rate(self, chave, valor):
-        """
-        Valida e salva uma taxa no banco de dados.
-        """
-
-        try:
-            # Tenta converter para float para garantir que é um número válido
-            float(valor.replace(',', '.'))
-            sales_logic.set_config(chave, valor)
-            print(f"Configuração '{chave}' salva com o valor: {valor}")
-        except ValueError:
-            print(f"Erro: Valor '{valor}' não é um número válido para a taxa.")
-            # Opcional: mostrar um messagebox de erro para o usuário
-            messagebox.showerror("Erro de Formato", f"O valor '{valor}' não é um número válido para a taxa.")
-            # Recarrega o valor antigo para não deixar o valor inválido na tela
-            self._load_initial_taxes()
     
     def _clear_history(self):
         """
         Limpa o histórico de vendas após confirmação.
         """
 
+        # Solicita confirmação do usuário antes de limpar o histórico
         confirm = messagebox.askyesno(
             "Confirmar Limpeza",
             "Tem certeza que deseja apagar TODO o histórico de vendas?\n\n"
@@ -273,9 +279,12 @@ class AppWindow(tk.Tk):
             icon='warning'
         )
 
+        # Se o usuário confirmar, chama a função de lógica de negócios para limpar os dados de vendas
         if confirm:
             success = sales_logic.clear_sales_data()
+            
             if success:
                 messagebox.showinfo("Sucesso", "Histórico de vendas apagado com sucesso!", parent=self)
+            
             else:
                 messagebox.showerror("Erro", "Ocorreu um erro ao tentar limpar o histórico.", parent=self)
