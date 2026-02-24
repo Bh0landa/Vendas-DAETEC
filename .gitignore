@@ -17,3 +17,6 @@ planilhas.db
 
 # Pasta de dados gerada pelo executável
 data/
+
+# Icone do aplicativo gerado durante o processo de build
+*.ico
