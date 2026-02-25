@@ -1,9 +1,17 @@
 import sqlite3
 import datetime
+import sys
+import os
 from pathlib import Path
 
 # Configuração do Caminho do Banco de Dados
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "planilhas.db"
+if getattr(sys, 'frozen', False):
+    # Executável PyInstaller
+    BASE_DIR = Path(sys.executable).parent
+else:
+    # Modo desenvolvimento
+    BASE_DIR = Path(__file__).parent.parent.parent
+DB_PATH = BASE_DIR / "data" / "planilhas.db"
 
 def initialize_database():
     """
