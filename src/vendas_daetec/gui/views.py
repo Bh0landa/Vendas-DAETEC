@@ -454,7 +454,7 @@ class SaleDialog(tk.Toplevel):
         ttk.Label(control_frame, text=total_text, font=("Calibri", 14, "bold")).pack(side="left")
 
         # Checkbox para escolher entre pagamento integral ou fracionado
-        self.integral_payment_var = tk.BooleanVar()
+        self.integral_payment_var = tk.BooleanVar(1)
         integral_check = ttk.Checkbutton(control_frame, text="Pagamento Integral", variable=self.integral_payment_var, command=self._toggle_payment_mode)
         integral_check.pack(side="right")
 
