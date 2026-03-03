@@ -265,22 +265,24 @@ class AppWindow(tk.Tk):
     
     def _clear_history(self):
         """
-        Limpa o histórico de vendas após confirmação.
+        Limpa o histórico de vendas após o usuário digitar a confirmação.
         """
-
-        # Solicita confirmação do usuário antes de limpar o histórico
-        confirm = messagebox.askyesno(
-            "Confirmar Limpeza",
-            "Tem certeza que deseja apagar TODO o histórico de vendas?\n\n"
-            "Isso removerá irreversivelmente todas as vendas registradas,\n"
-            "mas manterá os cadastros de Vendedores e Produtos.\n\n"
-            "Recomendamos que gere um relatório antes de prosseguir.",
-            parent=self,
-            icon='warning'
+        
+        # Mensagem de confirmação detalhada para o usuário
+        prompt_text = (
+            "Esta ação é IRREVERSÍVEL e apagará todo o histórico de vendas.\n\n"
+            "Para confirmar, digite a palavra 'CONFIRMAR' na caixa abaixo e clique em OK."
         )
-
-        # Se o usuário confirmar, chama a função de lógica de negócios para limpar os dados de vendas
-        if confirm:
+        
+        # Pede ao usuário para digitar a confirmação
+        user_input = simpledialog.askstring(
+            "Confirmação de Segurança",
+            prompt_text,
+            parent=self
+        )
+        
+        # Verifica se o usuário digitou a palavra correta
+        if user_input and user_input.strip() == "CONFIRMAR":
             success = sales_logic.clear_sales_data()
             
             if success:
@@ -288,3 +290,6 @@ class AppWindow(tk.Tk):
             
             else:
                 messagebox.showerror("Erro", "Ocorreu um erro ao tentar limpar o histórico.", parent=self)
+        
+        elif user_input is not None:
+            messagebox.showwarning("Ação Cancelada", "A palavra de confirmação está incorreta. Nenhuma ação foi realizada.", parent=self)
