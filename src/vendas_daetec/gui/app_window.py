@@ -271,7 +271,7 @@ class AppWindow(tk.Tk):
         # Mensagem de confirmação detalhada para o usuário
         prompt_text = (
             "Esta ação é IRREVERSÍVEL e apagará todo o histórico de vendas.\n\n"
-            "Para confirmar, digite a palavra 'CONFIRMAR' na caixa abaixo e clique em OK."
+            "Para confirmar, digite a palavra chave na caixa abaixo e clique em OK."
         )
         
         # Pede ao usuário para digitar a confirmação
@@ -282,7 +282,7 @@ class AppWindow(tk.Tk):
         )
         
         # Verifica se o usuário digitou a palavra correta
-        if user_input and user_input.strip() == "CONFIRMAR":
+        if user_input and user_input.strip() == "3042330148":
             success = sales_logic.clear_sales_data()
             
             if success:

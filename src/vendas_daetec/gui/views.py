@@ -297,16 +297,18 @@ class SaleDialog(tk.Toplevel):
         """
         
         # Define as colunas para o carrinho
-        columns = ("produto", "qtd", "preco_unit", "preco_total")
+        columns = ("vendedor", "produto", "qtd", "preco_unit", "preco_total")
         self.cart_tree = ttk.Treeview(self.cart_frame, columns=columns, show="headings")
 
         # Cabeçalhos
+        self.cart_tree.heading("vendedor", text="Vendedor")
         self.cart_tree.heading("produto", text="Produto")
         self.cart_tree.heading("qtd", text="Qtd.")
         self.cart_tree.heading("preco_unit", text="Preço Unit.")
         self.cart_tree.heading("preco_total", text="Preço Total")
 
         # Colunas
+        self.cart_tree.column("vendedor", width=120, anchor=tk.W)
         self.cart_tree.column("qtd", width=60, anchor=tk.CENTER)
         self.cart_tree.column("preco_unit", width=100, anchor=tk.E)
         self.cart_tree.column("preco_total", width=100, anchor=tk.E)
@@ -403,14 +405,19 @@ class SaleDialog(tk.Toplevel):
         product_id, prod_name, unit_price = product_data
         total_price = quantity * unit_price 
 
+        # Pega o vendedor selecionado
+        selected_seller_name = self.seller_var.get()
+        vendedor_id = [v_id for v_id, v_name in self.vendedores if v_name == selected_seller_name][0]
+
         # Adiciona o item ao carrinho visual (Treeview)
         preco_unit_formatado = f"R$ {unit_price:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         preco_total_formatado = f"R$ {total_price:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        self.cart_tree.insert("", tk.END, values=(prod_name, quantity, preco_unit_formatado, preco_total_formatado))
+        self.cart_tree.insert("", tk.END, values=(selected_seller_name, prod_name, quantity, preco_unit_formatado, preco_total_formatado))
 
         # Adiciona o item à nossa lista de dados interna
         self.cart_items.append({
             "produto_id": product_id,
+            "vendedor_id": vendedor_id,
             "nome": prod_name,
             "quantidade": quantity,
             "preco_unitario": unit_price,
@@ -423,9 +430,6 @@ class SaleDialog(tk.Toplevel):
         
         # Habilita o botão de pagamento
         self.payment_button['state'] = 'normal'
-
-        # Bloqueia a seleção do vendedor
-        self.seller_combo['state'] = 'disabled'
 
         # Limpa os campos para a próxima adição
         self.product_var.set("")
@@ -454,7 +458,7 @@ class SaleDialog(tk.Toplevel):
         ttk.Label(control_frame, text=total_text, font=("Calibri", 14, "bold")).pack(side="left")
 
         # Checkbox para escolher entre pagamento integral ou fracionado
-        self.integral_payment_var = tk.BooleanVar()
+        self.integral_payment_var = tk.BooleanVar(value=True)
         integral_check = ttk.Checkbutton(control_frame, text="Pagamento Integral", variable=self.integral_payment_var, command=self._toggle_payment_mode)
         integral_check.pack(side="right")
 
@@ -462,7 +466,7 @@ class SaleDialog(tk.Toplevel):
         self.integral_mode_frame = ttk.Frame(self.payment_frame)
 
         # Opções de método de pagamento para o modo integral
-        payment_methods = ["Dinheiro", "Pix", "Débito", "Crédito"]
+        payment_methods = ["Pix", "Dinheiro", "Débito", "Crédito"]
         ttk.Label(self.integral_mode_frame, text="Método de Pagamento:").pack(side="left", padx=(0, 10))
         self.integral_method_var = tk.StringVar()
         self.integral_method_combo = ttk.Combobox(self.integral_mode_frame, textvariable=self.integral_method_var, values=payment_methods, state="readonly")
@@ -478,9 +482,10 @@ class SaleDialog(tk.Toplevel):
 
         # Dicionário para armazenar os widgets de pagamento fracionado
         self.payment_widgets = {}
+        payment_methods_split = ["Pix", "Dinheiro", "Débito", "Crédito"]
         
         # Cria os checkboxes e campos de entrada para cada método de pagamento no modo fracionado
-        for i, method in enumerate(payment_methods):
+        for i, method in enumerate(payment_methods_split):
             var = tk.BooleanVar()
             chk = ttk.Checkbutton(self.split_mode_frame, text=f"{method}: R$", variable=var)
             chk.grid(row=i, column=0, sticky="w", padx=5, pady=2)
@@ -496,6 +501,9 @@ class SaleDialog(tk.Toplevel):
         # Botão para finalizar a venda
         finish_button = ttk.Button(self.payment_frame, text="Finalizar Venda", command=self._finish_sale)
         finish_button.pack(side="bottom", anchor="e", pady=(20, 0))
+
+        # Garante que o modo de pagamento inicial esteja correto
+        self._toggle_payment_mode()
 
     def _toggle_payment_mode(self):
         """
@@ -592,16 +600,48 @@ class SaleDialog(tk.Toplevel):
             messagebox.showerror("Erro de Valor", f"A soma dos pagamentos (R$ {total_pago:.2f}) não corresponde ao total da venda (R$ {self.total_venda:.2f}).", parent=self)
             return
 
-        # Pega o ID do vendedor
-        selected_seller_name = self.seller_var.get()
-        vendedor_id = [v_id for v_id, v_name in self.vendedores if v_name == selected_seller_name][0]
+        # Agrupa os itens do carrinho por vendedor
+        sales_by_seller = {}
+        for item in self.cart_items:
+            vendedor_id = item['vendedor_id']
+            if vendedor_id not in sales_by_seller:
+                sales_by_seller[vendedor_id] = {
+                    'cart_items': [],
+                    'valor_total': 0.0
+                }
+            sales_by_seller[vendedor_id]['cart_items'].append(item)
+            sales_by_seller[vendedor_id]['valor_total'] += item['preco_total']
 
-        # Chama a função do backend
-        success = sales_logic.register_sale(vendedor_id=vendedor_id, valor_total=self.total_venda, cart_items=self.cart_items, payments=payments)
+        # Processa as vendas para cada vendedor
+        all_success = True
+        for vendedor_id, sale_data in sales_by_seller.items():
+            # Define os pagamentos para esta venda específica
+            final_payments_for_seller = []
 
-        if success:
-            messagebox.showinfo("Sucesso", "Venda registrada com sucesso!", parent=self)
+            if self.integral_payment_var.get():
+                # Pagamento Integral: usa o método único para o valor total da venda do vendedor
+                method = self.integral_method_var.get()
+                final_payments_for_seller.append({'metodo': method, 'valor': sale_data['valor_total']})
+            else:
+                # Pagamento Fracionado: distribui os pagamentos proporcionalmente
+                for p in payments:
+                    proportional_value = (sale_data['valor_total'] / self.total_venda) * p['valor']
+                    final_payments_for_seller.append({'metodo': p['metodo'], 'valor': proportional_value})
+
+            # Chama a função do backend para cada vendedor com os pagamentos corretos
+            success = sales_logic.register_sale(
+                vendedor_id=vendedor_id,
+                valor_total=sale_data['valor_total'],
+                cart_items=sale_data['cart_items'],
+                payments=final_payments_for_seller
+            )
+            if not success:
+                all_success = False
+                break # Interrompe se uma das vendas falhar
+
+        if all_success:
+            messagebox.showinfo("Sucesso", "Venda(s) registrada(s) com sucesso!", parent=self)
             self.destroy()
 
         else:
-            messagebox.showerror("Erro no Banco de Dados", "Ocorreu um erro ao salvar a venda. A transação foi revertida.", parent=self)
+            messagebox.showerror("Erro no Banco de Dados", "Ocorreu um erro ao salvar uma ou mais vendas. A transação foi revertida.", parent=self)
