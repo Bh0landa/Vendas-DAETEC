@@ -8,3 +8,4 @@ dist/
 planilhas.db
 data/
 *.ico
+*.spec
